@@ -105,7 +105,6 @@ declaVar: tipoSimp TID TPUNTOCOMA  /* tipoSimp: $1, TID: $2, TPUNTOCOMA:$3. Ej -
         fflush(stderr);
         if (!insTdS(strdup($2), VARIABLE, $1.t, niv, dvar, -1)) yyerror("Identificador de variable repetido");
         else {
-            /* Comprobar que el tipo de la inicialización coincide con el declarado */
             if ($1.t != $4.t)
                 yyerror("Error de tipos en la inicializacion de la variable");
             dvar += TALLA_TIPO_SIMPLE;
@@ -147,8 +146,6 @@ declaFunc:
             yyerror("Función repetida");
         } else if (!insTdS(strdup($2), FUNCION, $1.t, niv-1, dvar, $2)) {
             yyerror("Función repetida");
-        }else{
-            insTdD (-1, $1.t); /*-1 PARA INDICAR QUE ES UNA NUEVA ENTRADA*/
         }
         
     }
@@ -160,6 +157,9 @@ declaFunc:
         if (verTdS) { mostrarTdS(); }
 		dvar = $8.desp;
 		$$.num_params = $5.num_params;
+        if($8.tipo_return != $1.t){
+            yyerror("Error de tipos en el 'return'");
+        }
     }
     ;
 
@@ -174,18 +174,20 @@ tipoSimp:
     | TBOOL {$$.t = T_LOGICO;};
 
 paramForm:
-    { $$.num_params = -1; }
+    { 
+        $$.ref = insTdD(-1, T_VACIO);
+        $$.num_params = 0;
+    }
     | listParamForm { 
         $$.num_params = $1.num_params; 
         $$.ref = $1.ref;
-        $$.talla = $1.talla;
         }
     ;
 listParamForm:
     tipoSimp TID 
     {
         $$.num_params = 1;
-        $$.talla = TALLA_TIPO_SIMPLE;
+        $$.talla = TALLA_TIPO_SIMPLE+ TALLA_SEGENLACES;
         /*Primer parámetro (último en la lista), se crea dominio*/
         $$.ref = insTdD(-1, $1.t); 
         
@@ -210,13 +212,11 @@ listParamForm:
 bloque:
     TLLAVAB declaVarLocal listInst TRETURN expre TPUNTOCOMA TLLAVCERR 
     {
-        /*OBTENEMOS LA INFORMACION DE LA FUNCION INICIAL*/
-        INF inf = obtTdD(-1);
-		if (inf.tipo != T_ERROR) {
-			if (inf.tipo != $5.t) {
-				yyerror("Error de tipos en el 'return'"); 
-			}     
-		}
+        /*Verificar tipo del return vs tipo de función*/
+
+        $$.desp = dvar;
+        $$.num_params = 0;
+        $$.tipo_return = $5.t;
 
         /*Descargar el contexto de la función al terminar su bloque */
         descargaContexto(niv);
@@ -252,7 +252,6 @@ instEntSal:
 instSelec:
     TIF TPARAB expre TPARCERR inst TELSE inst 
     {
-        /* Verificar que la expresión de la condición sea de tipo lógico (TBOOL) */
         if ($3.t != T_LOGICO)
             yyerror("La expresión de la instrucción if-else debe ser de tipo lógico");
     }
@@ -444,7 +443,7 @@ expreSufi:
         SIMB sim = obtTdS($1);
         if (sim.t == T_ERROR)
             yyerror("Uso de variable no declarada");
-        $$.t = sim.t;   /* devuelve el tipo */
+        $$.t = sim.t; 
       }
     | TID TCORCHAB expre TCORCHCERR 
     {
@@ -470,7 +469,7 @@ expreSufi:
                     yyerror("Parámetros de la función no coinciden con la declaración");
             }
         }
-          $$.t = sim.t;  /* return function return type */
+          $$.t = sim.t;
       };
 
 paramAct: 
