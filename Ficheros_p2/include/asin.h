@@ -54,40 +54,40 @@ extern int yydebug;
     YYEOF = 0,                     /* "end of file"  */
     YYerror = 256,                 /* error  */
     YYUNDEF = 257,                 /* "invalid token"  */
-    TID = 258,                     /* TID  */
-    TINT = 259,                    /* TINT  */
-    TBOOL = 260,                   /* TBOOL  */
-    TCTE = 261,                    /* TCTE  */
-    TASIG = 262,                   /* TASIG  */
-    TMAS = 263,                    /* TMAS  */
-    TMENOS = 264,                  /* TMENOS  */
-    TDIV = 265,                    /* TDIV  */
-    TMULT = 266,                   /* TMULT  */
-    TEXCL = 267,                   /* TEXCL  */
-    TFALSE = 268,                  /* TFALSE  */
-    TTRUE = 269,                   /* TTRUE  */
-    TAND = 270,                    /* TAND  */
-    TOR = 271,                     /* TOR  */
-    TPARAB = 272,                  /* TPARAB  */
-    TPARCERR = 273,                /* TPARCERR  */
-    TLLAVAB = 274,                 /* TLLAVAB  */
-    TLLAVCERR = 275,               /* TLLAVCERR  */
-    TCORCHAB = 276,                /* TCORCHAB  */
-    TCORCHCERR = 277,              /* TCORCHCERR  */
-    TPUNTOCOMA = 278,              /* TPUNTOCOMA  */
-    TCOMA = 279,                   /* TCOMA  */
-    TREAD = 280,                   /* TREAD  */
-    TPRINT = 281,                  /* TPRINT  */
-    TIF = 282,                     /* TIF  */
-    TELSE = 283,                   /* TELSE  */
-    TFOR = 284,                    /* TFOR  */
-    TRETURN = 285,                 /* TRETURN  */
-    TIGUALQUE = 286,               /* TIGUALQUE  */
-    TDISTINTOQUE = 287,            /* TDISTINTOQUE  */
-    TMAYORQUE = 288,               /* TMAYORQUE  */
-    TMENORQUE = 289,               /* TMENORQUE  */
-    TMAYORIGUAL = 290,             /* TMAYORIGUAL  */
-    TMENORIGUAL = 291              /* TMENORIGUAL  */
+    TASIG = 258,                   /* TASIG  */
+    TMAS = 259,                    /* TMAS  */
+    TMENOS = 260,                  /* TMENOS  */
+    TDIV = 261,                    /* TDIV  */
+    TMULT = 262,                   /* TMULT  */
+    TEXCL = 263,                   /* TEXCL  */
+    TFALSE = 264,                  /* TFALSE  */
+    TTRUE = 265,                   /* TTRUE  */
+    TAND = 266,                    /* TAND  */
+    TOR = 267,                     /* TOR  */
+    TPARAB = 268,                  /* TPARAB  */
+    TPARCERR = 269,                /* TPARCERR  */
+    TLLAVAB = 270,                 /* TLLAVAB  */
+    TLLAVCERR = 271,               /* TLLAVCERR  */
+    TCORCHAB = 272,                /* TCORCHAB  */
+    TCORCHCERR = 273,              /* TCORCHCERR  */
+    TPUNTOCOMA = 274,              /* TPUNTOCOMA  */
+    TCOMA = 275,                   /* TCOMA  */
+    TREAD = 276,                   /* TREAD  */
+    TPRINT = 277,                  /* TPRINT  */
+    TIF = 278,                     /* TIF  */
+    TELSE = 279,                   /* TELSE  */
+    TFOR = 280,                    /* TFOR  */
+    TRETURN = 281,                 /* TRETURN  */
+    TIGUALQUE = 282,               /* TIGUALQUE  */
+    TDISTINTOQUE = 283,            /* TDISTINTOQUE  */
+    TMAYORQUE = 284,               /* TMAYORQUE  */
+    TMENORQUE = 285,               /* TMENORQUE  */
+    TMAYORIGUAL = 286,             /* TMAYORIGUAL  */
+    TMENORIGUAL = 287,             /* TMENORIGUAL  */
+    TID = 288,                     /* TID  */
+    TINT = 289,                    /* TINT  */
+    TBOOL = 290,                   /* TBOOL  */
+    TCTE = 291                     /* TCTE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -96,12 +96,26 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 2 "src/asin.y"
+#line 18 "src/asin.y"
 
-    int i;
-    char *s;
+    char *ident;    /* Nombre del identificador*/
+    int cent;       /* Valor de la cte numerica entera */
+    struct {
+        int num_params;
+        int ref;
+        int talla;
+    } paramInfo;
+    struct {
+        int t;
+    } tipo;
+    struct{
+        int tipo_return;
+        char *nombre_func;
+        int desp;
+        int num_params;
+    }funcion;
 
-#line 105 "asin.h"
+#line 119 "asin.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

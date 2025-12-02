@@ -44,10 +44,10 @@ comentario  "//"[^\n]*
 "<"            {retornar (TMENORQUE);}
 ">="           {retornar (TMAYORIGUAL);}
 "<="           {retornar (TMENORIGUAL);}
-"true"         {yylval.i = 1; retornar (TTRUE);}
-"false"        {yylval.i = 0; retornar (TFALSE);}
-"bool"         {yylval.i = 2; retornar (TBOOL);}
-"int"          {yylval.i = 1; retornar (TINT);}
+"true"         {yylval.cent = 1; retornar (TTRUE);}
+"false"        {yylval.cent = 0; retornar (TFALSE);}
+"bool"         {yylval.cent = 2; retornar (TBOOL);}
+"int"          {yylval.cent = 1; retornar (TINT);}
 "read"         {retornar (TREAD);}
 "print"        {retornar (TPRINT);}
 "if"           {retornar (TIF);}
@@ -55,15 +55,11 @@ comentario  "//"[^\n]*
 "for"          {retornar (TFOR);}
 "return"       {retornar (TRETURN);}
 {constante}    {
-    /* Truncar números reales a enteros */
-    double val = atof(yytext);
-    yylval.i = (int)val;  /* Trunca la parte decimal */
+    yylval.cent = atoi(yytext);  /*SE TRUNCA LA PARTE DECIMAL*/
     retornar (TCTE);
 }
 {variable}     {
-    /* Guardar el identificador en yylval.s para que el parser lo reciba */
-    yylval.s = strdup(yytext);
-    retornar (TID);
+    yylval.ident = strdup(yytext); retornar (TID);
 }
 {comentario}   ;
 .              {yyerror("Caracter desconocido");}

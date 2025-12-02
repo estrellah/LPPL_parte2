@@ -904,22 +904,22 @@ YY_RULE_SETUP
 case 25:
 YY_RULE_SETUP
 #line 47 "src/alex.l"
-{yylval.i = 1; retornar (TTRUE);}
+{yylval.cent = 1; retornar (TTRUE);}
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
 #line 48 "src/alex.l"
-{yylval.i = 0; retornar (TFALSE);}
+{yylval.cent = 0; retornar (TFALSE);}
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
 #line 49 "src/alex.l"
-{yylval.i = 2; retornar (TBOOL);}
+{yylval.cent = 2; retornar (TBOOL);}
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
 #line 50 "src/alex.l"
-{yylval.i = 1; retornar (TINT);}
+{yylval.cent = 1; retornar (TINT);}
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
@@ -955,37 +955,33 @@ case 35:
 YY_RULE_SETUP
 #line 57 "src/alex.l"
 {
-    /* Truncar números reales a enteros */
-    double val = atof(yytext);
-    yylval.i = (int)val;  /* Trunca la parte decimal */
+    yylval.cent = atoi(yytext);  /*SE TRUNCA LA PARTE DECIMAL*/
     retornar (TCTE);
 }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 63 "src/alex.l"
+#line 61 "src/alex.l"
 {
-    /* Guardar el identificador en yylval.s para que el parser lo reciba */
-    yylval.s = strdup(yytext);
-    retornar (TID);
+    yylval.ident = strdup(yytext); retornar (TID);
 }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 68 "src/alex.l"
+#line 64 "src/alex.l"
 ;
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 69 "src/alex.l"
+#line 65 "src/alex.l"
 {yyerror("Caracter desconocido");}
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 70 "src/alex.l"
+#line 66 "src/alex.l"
 ECHO;
 	YY_BREAK
-#line 989 "alex.c"
+#line 985 "alex.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1990,5 +1986,5 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 70 "src/alex.l"
+#line 66 "src/alex.l"
 
