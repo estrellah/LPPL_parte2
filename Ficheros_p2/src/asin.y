@@ -11,6 +11,9 @@
     int mainCount = 0;
     /* Temporales para manejar la insercion de funciones con mid-rule actions */
     int tipo_func = 0;
+
+    /* Para saber si la declaracion de la funcion actual ha fallado */
+    int errorDeclFuncActual = 0;
     
 %}
 
@@ -139,25 +142,41 @@ declaFunc:
     }
     TPARAB paramForm TPARCERR
     {    /*OBJETIVO: Insertar informacion de la funcion en la TdS */
-        if (strdup($2) && strcmp(strdup($2), "main") == 0) { mainCount++; }
-        
-        SIMB simb = obtTdS(strdup($2));
+        /* ¿Es main? contamos cuántas hay */
+        if (strcmp($2, "main") == 0) {
+            mainCount++;
+        }
+
+        /* Insertar la funcion en la TdS de nivel global (niv-1) */
+        SIMB simb = obtTdS($2);
         if (simb.t != T_ERROR) {
             yyerror("Función repetida");
-        } else if (!insTdS(strdup($2), FUNCION, $1.t, niv-1, dvar, $2)) {
+            errorDeclFuncActual = 1;
+        } else if (!insTdS(strdup($2), FUNCION, $1.t, niv-1, dvar, $5.ref)) {
             yyerror("Función repetida");
+            errorDeclFuncActual = 1;
+        } else {
+            errorDeclFuncActual = 0;
         }
-        
     }
     bloque
-     /* Mostrar la informacion de la funcion en la TdS */
-    /* Gestion del contexto y recuperar ‘‘dvar’’*/{
+    /* Mostrar la informacion de la funcion en la TdS */
+    /* Gestion del contexto y recuperar ‘‘dvar’’*/
+    {
         $$.tipo_return = $1.t;
         $$.nombre_func = strdup($2);
-        if (verTdS) { mostrarTdS(); }
-		dvar = $8.desp;
-		$$.num_params = $5.num_params;
-        if($8.tipo_return != $1.t){
+
+        /* OJO: mostrarTdS se hace ahora en 'bloque' (ver abajo) */
+
+        dvar = $8.desp;
+        $$.num_params = $5.num_params;
+
+        if (errorDeclFuncActual) {
+            /* Error extra asociado a la declaracion de la funcion
+               (el de b04: "En la declaracion de la funcion") */
+            yyerror("En la declaracion de la funcion");
+            errorDeclFuncActual = 0;
+        } else if ($8.tipo_return != $1.t) {
             yyerror("Error de tipos en el 'return'");
         }
     }
@@ -213,10 +232,12 @@ bloque:
     TLLAVAB declaVarLocal listInst TRETURN expre TPUNTOCOMA TLLAVCERR 
     {
         /*Verificar tipo del return vs tipo de función*/
-
         $$.desp = dvar;
         $$.num_params = 0;
         $$.tipo_return = $5.t;
+
+        /* Mostrar TdS de esta funcion (global + locales + parámetros) */
+        if (verTdS) mostrarTdS();
 
         /*Descargar el contexto de la función al terminar su bloque */
         descargaContexto(niv);
@@ -459,22 +480,34 @@ expreSufi:
     | TID TPARAB paramAct TPARCERR 
     {
         SIMB sim = obtTdS($1);
-        if (sim.t == T_ERROR)
+        if (sim.t == T_ERROR) {
             yyerror("Uso de función no declarada");
-        else {
-        /*Comprueba coincidencia de dominios (parámetros) */
-            /* si ambos -1 => sin parámetros -> OK */
-            if (!($3.num_params == -1 && sim.ref == -1)) {
-                if (!cmpDom($3.num_params, sim.ref))
-                    yyerror("Parámetros de la función no coinciden con la declaración");
+        } else {
+            /* Comprobar que el dominio de los parametros actuales coincide con el de la funcion */
+            if (!cmpDom($3.ref, sim.ref)) {
+                yyerror("Parámetros de la función no coinciden con la declaración");
             }
         }
-          $$.t = sim.t;
-      };
+        $$.t = sim.t;
+    };
+
 
 paramAct: 
-    /* Vacío*/      {$$.num_params = -1;}
-    |listParamAct   {$$.num_params = $1.num_params;}; 
+    /* Vacío*/      
+    {
+        /* Dominio vacío: 0 parámetros actuales */
+        $$.num_params = 0;
+        $$.ref        = insTdD(-1, T_VACIO);
+        $$.talla      = 0;
+    }
+    | listParamAct   
+    {
+        /* Copiamos el dominio construido en listParamAct */
+        $$.num_params = $1.num_params;
+        $$.ref        = $1.ref;
+        $$.talla      = $1.talla;
+    }
+    ;
 listParamAct:
     expre 
     {
