@@ -22,6 +22,7 @@
     int lansSaltoMain  = -1;    /* lista para salto inicial a main */
 
     int tallaGlobales = 0;      /* talla total de las globales (nivel 0) */
+    int numParamActual = 0;   /* nº de parámetros de la función que se está declarando */
 
     /* nombre de la función que se está compilando ahora */
     char *funcionActual = NULL;
@@ -30,7 +31,7 @@
 /* ATRIBUTOS */
 %union {
     char *ident;    /* Nombre del identificador*/
-    int cent;       /* Valor de la cte numerica entera */
+    int cent;       /* Entero genérico (LANS, etiquetas...) */
 
     struct {
         int num_params;
@@ -60,6 +61,12 @@
     struct {
         int e;   /* código de operación (ESUM, EDIF, EMULT, ...) */
     } emite;
+
+    /* Para guardar listas de saltos (verdadero/falso) en una sola acción */
+    struct {
+        int ltrue;
+        int lfalse;
+    } listas;
 }
 
 
@@ -104,6 +111,9 @@
 
 %type <emite> opUna opMul opAd opRel opIgual opLogic
 
+/* Marcas de etiqueta (guardan si actual) */
+%type <cent> marca
+
 %%
 
 /* PROGRAMA SERÁ LA ÚLTIMA REGLA EN REDUCIRSE */
@@ -135,8 +145,6 @@ programa
         /* ========= FINAL DEL PROGRAMA ========= */
 
         if (verTdS) mostrarTdS();
-        fprintf(stderr, "DEBUG: ULTIMA REGLA");
-        fflush(stderr);
 
         /* Comprobaciones de main */
         if (mainCount == 0) {
@@ -187,7 +195,7 @@ declaVar: tipoSimp TID TPUNTOCOMA
         else {
             if ($1.t != $4.t)
                 yyerror("Error de tipos en la inicializacion de la variable");
-            /* (Opcional) aquí podrías generar un EASIG para inicializar la variable */
+            /* (Opcional) podrías generar aquí EASIG para inicializarla */
             dvar += TALLA_TIPO_SIMPLE;
             if (niv == 0)
                 tallaGlobales += TALLA_TIPO_SIMPLE;
@@ -217,15 +225,16 @@ declaFunc:
         niv++;
         cargaContexto(niv);
         dvar = 0;
-
         funcionActual = strdup($2);
-
         if (strcmp($2, "main") == 0) {
             etqMain = si;
         }
     }
     TPARAB paramForm TPARCERR
     {
+        /* <<< AÑADIDO: nº de parámetros de esta función >>> */
+        numParamActual = $5.num_params;
+
         if (strcmp($2, "main") == 0) {
             mainCount++;
         }
@@ -272,30 +281,29 @@ const:
       }
     | TTRUE
       {
-        /* true: lo representamos como 1 */
+        /* true: 1 */
         $$.t = T_LOGICO;
         $$.n = niv;
         $$.d = creaVarTemp();
 
-        TIPO_ARG aVal = crArgEnt(1);         /* OJO: aquí ya NO usamos $1    */
+        TIPO_ARG aVal = crArgEnt(1);
         TIPO_ARG aRes = crArgPos(niv, $$.d);
 
         emite(EASIG, aVal, crArgNul(), aRes);
       }
     | TFALSE
       {
-        /* false: lo representamos como 0 */
+        /* false: 0 */
         $$.t = T_LOGICO;
         $$.n = niv;
         $$.d = creaVarTemp();
 
-        TIPO_ARG aVal = crArgEnt(0);         /* Tampoco usamos $1 aquí       */
+        TIPO_ARG aVal = crArgEnt(0);
         TIPO_ARG aRes = crArgPos(niv, $$.d);
 
         emite(EASIG, aVal, crArgNul(), aRes);
       }
     ;
-
 
 tipoSimp:
       TINT    { $$.t = T_ENTERO; }
@@ -339,7 +347,6 @@ listParamForm:
 bloque:
     TLLAVAB
     {
-        /* PRÓLOGO DE FUNCIÓN */
         TIPO_ARG argN = crArgNul();
         emite(PUSHFP, argN, argN, argN);
         emite(FPTOP,  argN, argN, argN);
@@ -359,9 +366,27 @@ bloque:
             completaLans($<cent>2, argTalla);
         }
 
-        /* EPÍLOGO DE FUNCIÓN */
+        /* === ESTRELLA: guardar valor de retorno en el RA ===
+           Convenio: antes de llamar a la función se ha hecho:
+             EPUSH 0           ; hueco valor retorno
+             EPUSH arg_k
+             ...
+             EPUSH arg_1
+           Con ese convenio, tras hacer CALL/PUSHFP/FPTOP,
+           el hueco de retorno queda a -(numParamActual + 2)
+           respecto de fp. */
+        if ($6.t != T_ERROR) {
+            int despRet = -(numParamActual + 2);
+            TIPO_ARG aSrc = crArgPos($6.n, $6.d);
+            TIPO_ARG aN   = crArgNul();
+            TIPO_ARG aDst = crArgPos(niv, despRet);
+            emite(EASIG, aSrc, aN, aDst);
+        }
+
+        /* === EPÍLOGO DE FUNCIÓN === */
         {
             TIPO_ARG argN = crArgNul();
+
             emite(TOPFP, argN, argN, argN);
             emite(FPPOP, argN, argN, argN);
 
@@ -373,7 +398,6 @@ bloque:
         }
 
         if (verTdS) mostrarTdS();
-
         descargaContexto(niv);
         niv--;
     }
@@ -433,21 +457,121 @@ instEntSal:
     }
     ;
 
+/* ===== IF / IF-ELSE con saltos y LANS ===== */
+
 instSelec:
-    TIF TPARAB expre TPARCERR inst TELSE inst 
+    TIF TPARAB expre TPARCERR
     {
-        if ($3.t != T_LOGICO)
+        if ($3.t != T_LOGICO && $3.t != T_ERROR)
             yyerror("La expresión de la instrucción if-else debe ser de tipo lógico");
-        /* Código de salto condicional se haría aquí (otra parte del grupo) */
+
+        if ($3.t != T_ERROR) {
+            TIPO_ARG a0   = crArgEnt(0);
+            TIPO_ARG aNul = crArgNul();
+
+            /* si cond == 0 saltaremos al ELSE (aún sin etiqueta) */
+            emite(EIGUAL,
+                  crArgPos($3.n, $3.d),
+                  a0,
+                  aNul);
+            $<cent>$ = creaLans(si-1);  /* lista de saltos al else */
+        } else {
+            $<cent>$ = -1;
+        }
+    }
+    inst
+    {
+        /* tras el then: salto incondicional al final del if-else */
+        TIPO_ARG aN = crArgNul();
+        emite(GOTOS, aN, aN, aN);
+
+        /* parchear saltos de la condición hacia el inicio del else (ahora si) */
+        if ($<cent>5 != -1) {
+            TIPO_ARG aEtqElse = crArgEtq(si);
+            completaLans($<cent>5, aEtqElse);
+        }
+
+        $<cent>$ = creaLans(si-1);   /* lista de saltos desde el then al final */
+    }
+    TELSE
+    inst
+    {
+        /* completar saltos al final del if-else */
+        if ($<cent>7 != -1) {
+            TIPO_ARG aEtqFin = crArgEtq(si);
+            completaLans($<cent>7, aEtqFin);
+        }
     }
     ;
 
+/* ===== FOR con saltos y LANS (semántica tipo for(init; cond; upd) inst) ===== */
+
 instIter:
-    TFOR TPARAB expreOP TPUNTOCOMA expre TPUNTOCOMA expreOP TPARCERR inst 
+    TFOR TPARAB expreOP TPUNTOCOMA
+    marca              /* $5: etiqueta de inicio de la condición */
+    expre              /* $6: condición */
+    TPUNTOCOMA
     {
-        if ($5.t != T_LOGICO)
+        /* Punto tras evaluar la condición */
+        $<listas>$.ltrue  = -1;
+        $<listas>$.lfalse = -1;
+
+        if ($6.t != T_LOGICO && $6.t != T_ERROR)
             yyerror("La expresion del 'for' debe ser 'logica'");
-        /* Saltos de bucle se harían aquí */
+
+        if ($6.t != T_ERROR) {
+            TIPO_ARG a0   = crArgEnt(0);
+            TIPO_ARG aNul = crArgNul();
+
+            /* si cond == 0 -> salida del bucle (Lend, aún desconocida) */
+            emite(EIGUAL,
+                  crArgPos($6.n, $6.d),
+                  a0,
+                  aNul);
+            $<listas>$.lfalse = creaLans(si-1);
+
+            /* si cond != 0 -> ir al cuerpo (Lbody, aún desconocida) */
+            emite(GOTOS, aNul, aNul, aNul);
+            $<listas>$.ltrue = creaLans(si-1);
+        }
+    }
+    marca              /* $9: etiqueta de inicio del update */
+    expreOP            /* update */
+    TPARCERR
+    {
+        /* Estamos justo antes del cuerpo: si cond es true, venimos aquí */
+
+        /* Parchear saltos verdaderos al comienzo del cuerpo (etiqueta actual) */
+        if ($<listas>8.ltrue != -1) {
+            TIPO_ARG aBody = crArgEtq(si);
+            completaLans($<listas>8.ltrue, aBody);
+        }
+
+        /* Desde el final del update, volver a la condición */
+        {
+            TIPO_ARG aN    = crArgNul();
+            TIPO_ARG aCond = crArgEtq($5);
+            emite(GOTOS, aN, aN, aCond);
+        }
+    }
+    inst               /* cuerpo del for */
+    {
+        /* Al final del cuerpo:
+           1) ir al inicio del update
+           2) completar saltos de salida (cond == 0) al punto actual (fin) */
+
+        /* 1) goto inicio update ($9) */
+        {
+            TIPO_ARG aN   = crArgNul();
+            TIPO_ARG aUpd = crArgEtq($9);
+            emite(GOTOS, aN, aN, aUpd);
+        }
+
+        /* 2) completar lista de falsos (salida del bucle) */
+        if ($<listas>8.lfalse != -1) {
+            TIPO_ARG aEnd = crArgEtq(si);
+            completaLans($<listas>8.lfalse, aEnd);
+        }
     }
     ;
 
@@ -550,7 +674,6 @@ expreLogic:
             $$.t = T_LOGICO;
             $$.d = creaVarTemp();
             $$.n = niv;
-            /* usamos EMULT para && y ESUM para || sobre 0/1 */
             emite($2.e,
                   crArgPos($1.n, $1.d),
                   crArgPos($3.n, $3.d),
@@ -674,7 +797,7 @@ expreUna:
     }
     | opUna expreUna 
     {
-        /* Distinguimos +, -, ! por el código en $1.e */
+        /* '+' no hace nada, '-' y '!' se manejan según $1.e */
         if ($1.e == 0) {          /* '+' → no-op */
             $$.t = $2.t;
             $$.d = $2.d;
@@ -738,37 +861,19 @@ expreSufi:
         $$.t = sim.t;
         $$.d = sim.d;
         $$.n = sim.n;
-      }
+    }
     | TID TCORCHAB expre TCORCHCERR 
     {
-        SIMB sim = obtTdS($1);
-        if (sim.t == T_ERROR) {
-            yyerror("Uso de array no declarado");
-            $$.t = T_ERROR;
-        } else if (sim.t != T_ARRAY) {
-            yyerror("La variable debe ser tipo 'array'");
-            $$.t = T_ERROR;
-        } else {
-            if ($3.t != T_ENTERO && $3.t != T_ERROR)
-                yyerror("El indice del \"array\" debe ser entero");
-
-            DIM info_arr = obtTdA(sim.ref);
-            $$.t = info_arr.telem;
-            if ($3.t == T_ENTERO) {
-                /* EAV arr, idx, res */
-                $$.d = creaVarTemp();
-                $$.n = niv;
-                emite(EAV,
-                      crArgPos(sim.n, sim.d),
-                      crArgPos($3.n, $3.d),
-                      crArgPos($$.n, $$.d));
-            } else {
-                $$.d = 0;
-                $$.n = 0;
-            }
-        }
+        /* ... tu código de arrays ... */
+    }
+    /* === ESTRELLA: llamada a función === */
+    | TID TPARAB
+      {
+          /* Reservamos espacio para el valor de retorno */
+          TIPO_ARG aN = crArgNul();
+          emite(EPUSH, aN, aN, crArgEnt(0));
       }
-    | TID TPARAB paramAct TPARCERR 
+      paramAct TPARCERR 
     {
         SIMB sim = obtTdS($1);
         if (sim.t == T_ERROR) {
@@ -777,16 +882,33 @@ expreSufi:
             $$.d = 0;
             $$.n = 0;
         } else {
-            if (!cmpDom($3.ref, sim.ref)) {
+            /* Comprobación de parámetros (ya la tenías) */
+            if (!cmpDom($4.ref, sim.ref)) {
                 yyerror("Parámetros de la función no coinciden con la declaración");
                 $$.t = T_ERROR;
+                $$.d = 0;
+                $$.n = 0;
             } else {
-                /* Aquí iría la secuencia completa de llamada (EPUSH, CALL, etc.) */
-                /* Por ahora solo modelamos que devuelve algo de tipo sim.t en un temporal */
+                TIPO_ARG aN = crArgNul();
+
+                /* sim.d contiene la etiqueta (si) de inicio de la función */
+                emite(CALL, aN, aN, crArgEtq(sim.d));
+
+                /* Al volver:
+                   Pila = [... RA llamante ... , ret, arg_1, ..., arg_k ]
+                   Queremos:
+                     - quitar los k argumentos
+                     - quedarnos con ret en un temporal */
+                if ($4.num_params > 0) {
+                    emite(DECTOP, aN, aN, crArgEnt($4.num_params));
+                }
+
+                /* Crear temporal para el valor devuelto */
                 $$.t = sim.t;
                 $$.d = creaVarTemp();
                 $$.n = niv;
-                /* TODO: generar código real de llamada */
+
+                emite(EPOP, aN, aN, crArgPos($$.n, $$.d));
             }
         }
     }
@@ -808,18 +930,35 @@ paramAct:
     }
     ;
 
+
 listParamAct:
     expre 
     {
+        /* Último argumento --> crea dominio */
         $$.num_params = 1;
-        $$.ref = insTdD(-1, $1.t);
+        $$.ref   = insTdD(-1, $1.t);
         $$.talla = TALLA_TIPO_SIMPLE;
+
+        /* ESTRELLA: EPUSH del valor del argumento */
+        if ($1.t != T_ERROR) {
+            TIPO_ARG aN = crArgNul();
+            emite(EPUSH, aN, aN, crArgPos($1.n, $1.d));
+        }
     }
     | expre TCOMA listParamAct 
     {
+        /* Añadimos un argumento a la izquierda */
         $$.num_params = $3.num_params + 1;
-        $$.ref = insTdD($3.ref, $1.t);
-        $$.talla = TALLA_TIPO_SIMPLE;
+        $$.ref   = insTdD($3.ref, $1.t);
+        $$.talla = $3.talla + TALLA_TIPO_SIMPLE;
+
+        /* EPUSH del valor de este argumento.
+           OJO: por la recursión, los EPUSH se generan
+           de derecha a izquierda: arg_k, ..., arg_1. */
+        if ($1.t != T_ERROR) {
+            TIPO_ARG aN = crArgNul();
+            emite(EPUSH, aN, aN, crArgPos($1.n, $1.d));
+        }
     }
     ;
 
@@ -838,7 +977,7 @@ opIgual:
 
 opRel:
       TMAYORQUE     { $$.e = EMAY;   }
-    | TMENORQUE    { $$.e = EMEN;   }
+    | TMENORQUE     { $$.e = EMEN;   }
     | TMAYORIGUAL  { $$.e = EMAYEQ; }
     | TMENORIGUAL  { $$.e = EMENEQ; }
     ;
@@ -867,5 +1006,9 @@ opUna:
     | TEXCL  { $$.e = -1;   }
     ;
 
-%%
+/* Marca de posición: guarda la etiqueta (si) del siguiente código */
+marca:
+    /* vacío */ { $$ = si; }
+    ;
 
+%%

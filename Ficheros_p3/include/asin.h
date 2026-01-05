@@ -96,10 +96,10 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 31 "src/asin.y"
+#line 32 "src/asin.y"
 
     char *ident;    /* Nombre del identificador*/
-    int cent;       /* Valor de la cte numerica entera */
+    int cent;       /* Entero genérico (LANS, etiquetas...) */
 
     struct {
         int num_params;
@@ -130,7 +130,13 @@ union YYSTYPE
         int e;   /* código de operación (ESUM, EDIF, EMULT, ...) */
     } emite;
 
-#line 134 "asin.h"
+    /* Para guardar listas de saltos (verdadero/falso) en una sola acción */
+    struct {
+        int ltrue;
+        int lfalse;
+    } listas;
+
+#line 140 "asin.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
