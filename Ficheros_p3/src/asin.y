@@ -965,45 +965,23 @@ listParamAct:
 /* OPERADORES → códigos de operación 3D */
 
 /* Para && y || usamos multiplicación y suma sobre 0/1 */
+/*TODO LO SIGUIENTE YA ESTÁ HECHO*/
+
+/*OPERACIONES*/
+/*COMO NO HAY ELEMENTOS DE COD INTERMEDIO PARA AND Y OR, UTILIZAREMOS MULT Y SUM*/
 opLogic: 
-      TAND { $$.e = EMULT; }
-    | TOR  { $$.e = ESUM;  }
-    ;
-
+    TAND {$$.e = EMULT;}| TOR {$$.e = ESUM;};
 opIgual:
-      TIGUALQUE     { $$.e = EIGUAL; }
-    | TDISTINTOQUE  { $$.e = EDIST;  }
-    ;
-
+    TIGUALQUE {$$.e = EIGUAL;} |TDISTINTOQUE {$$.e = EDIST;};
 opRel:
-      TMAYORQUE     { $$.e = EMAY;   }
-    | TMENORQUE     { $$.e = EMEN;   }
-    | TMAYORIGUAL  { $$.e = EMAYEQ; }
-    | TMENORIGUAL  { $$.e = EMENEQ; }
-    ;
-
-/* + y - binarios */
+    TMAYORQUE {$$.e = EMAY;}| TMENORQUE {$$.e = EMEN;} | TMAYORIGUAL {$$.e = EMAYEQ;}| TMENORIGUAL {$$.e = EMENEQ;};
+/*SACADO DE LA PAG17*/
 opAd:
-      TMAS   { $$.e = ESUM; }
-    | TMENOS { $$.e = EDIF; }
-    ;
-
-/* * y / */
+    TMAS {$$.e = ESUM;}| TMENOS {$$.e = EDIF;};
 opMul:
-      TMULT  { $$.e = EMULT; }
-    | TDIV   { $$.e = EDIVI; }
-    ;
-
-/* unarios: +, -, ! 
-   mapeo:
-   '+' → e = 0  (no-op)
-   '-' → e = ESIG
-   '!' → e = -1 (lo tratamos aparte)
-*/
+    TMULT {$$.e = EMULT;}| TDIV {$$.e = EDIVI;};
 opUna: 
-      TMAS   { $$.e = 0;    }
-    | TMENOS { $$.e = ESIG; }
-    | TEXCL  { $$.e = -1;   }
+    TMAS {$$.e = ESUM;}| TMENOS {$$.e = EDIF;}| TEXCL {$$.e = ESIG;};
     ;
 
 /* Marca de posición: guarda la etiqueta (si) del siguiente código */
