@@ -91,50 +91,113 @@
 programa
     :
     {
-        /* ========= CÓDIGO DE ARRANQUE DEL PROGRAMA (parte 3) =========
+        /* === INICIALIZACIÓN DEL CONTEXTO GLOBAL (igual que en la parte 2) === */
+        niv = 0;
+        dvar = 0;
+        si  = 0;
+        cargaContexto(niv);
+
+        /* === CÓDIGO DE ARRANQUE DEL PROGRAMA (parte 3) ===
            1) Reserva de espacio para variables globales
            2) Salto incondicional a main
-
-           Usamos INCTOP y GOTOS, dejando su resultado (campo res)
-           incompleto y guardando una lista de pendientes (lans...).
         */
         TIPO_ARG argN = crArgNul();
 
-        /* 1) Reserva de espacio para variables globales: INCTOP ? , ?, res */
+        /* 1) Reserva de espacio para variables globales */
         emite(INCTOP, argN, argN, argN);
-        lansReservaGlob = creaLans(si-1);   /* si-1 = instr recién emitida */
+        lansReservaGlob = creaLans(si-1);
 
-        /* 2) Salto inicial a main: GOTOS ? , ?, etq */
+        /* 2) Salto inicial a main */
         emite(GOTOS, argN, argN, argN);
         lansSaltoMain = creaLans(si-1);
     }
     listDecla 
     {
-        /* ========= FINAL DEL PROGRAMA (parte 2 + completar arranque) ========= */
+        /* ========= FINAL DEL PROGRAMA ========= */
 
-        if(verTdS) mostrarTdS();  
+        if (verTdS) mostrarTdS();
         fprintf(stderr, "DEBUG: ULTIMA REGLA");
         fflush(stderr);
 
-        /* Comprobaciones de main (parte 2) */
-        if (mainCount == 0)
+        /* Comprobaciones de main */
+        if (mainCount == 0) {
             yyerror("El programa no tiene 'main'");
-        else if (mainCount > 1)
+        } else if (mainCount > 1) {
             yyerror("Hay más de una función main");
+        }
 
-        /* COMPLETAR AHORA las instrucciones de arranque:
-           - INCTOP con tallaGlobales (entero)
-           - GOTOS con etqMain (etiqueta)
+        /* SOLO si hay exactamente una main completamos los lanzamientos */
+        if (mainCount == 1) {
+            TIPO_ARG arg;
+
+            /* Completar INCTOP con tallaGlobales */
+            arg = crArgEnt(tallaGlobales);
+            completaLans(lansReservaGlob, arg);
+
+            /* Completar GOTOS con etiqueta de main */
+            arg = crArgEtq(etqMain);
+            completaLans(lansSaltoMain, arg);
+        }
+
+        /* (Opcional) descarga del contexto global:
+         * descargaContexto(niv);   // si lo queréis usar
+         */
+    }
+    ;
+programa
+    :
+    {
+        /* === INICIALIZACIÓN DEL CONTEXTO GLOBAL (igual que en la parte 2) === */
+        niv = 0;
+        dvar = 0;
+        si  = 0;
+        cargaContexto(niv);
+
+        /* === CÓDIGO DE ARRANQUE DEL PROGRAMA (parte 3) ===
+           1) Reserva de espacio para variables globales
+           2) Salto incondicional a main
         */
-        TIPO_ARG arg;
+        TIPO_ARG argN = crArgNul();
 
-        /* Completar INCTOP */
-        arg = crArgEnt(tallaGlobales);
-        completaLans(lansReservaGlob, arg);
+        /* 1) Reserva de espacio para variables globales */
+        emite(INCTOP, argN, argN, argN);
+        lansReservaGlob = creaLans(si-1);
 
-        /* Completar GOTOS */
-        arg = crArgEtq(etqMain);
-        completaLans(lansSaltoMain, arg);
+        /* 2) Salto inicial a main */
+        emite(GOTOS, argN, argN, argN);
+        lansSaltoMain = creaLans(si-1);
+    }
+    listDecla 
+    {
+        /* ========= FINAL DEL PROGRAMA ========= */
+
+        if (verTdS) mostrarTdS();
+        fprintf(stderr, "DEBUG: ULTIMA REGLA");
+        fflush(stderr);
+
+        /* Comprobaciones de main */
+        if (mainCount == 0) {
+            yyerror("El programa no tiene 'main'");
+        } else if (mainCount > 1) {
+            yyerror("Hay más de una función main");
+        }
+
+        /* SOLO si hay exactamente una main completamos los lanzamientos */
+        if (mainCount == 1) {
+            TIPO_ARG arg;
+
+            /* Completar INCTOP con tallaGlobales */
+            arg = crArgEnt(tallaGlobales);
+            completaLans(lansReservaGlob, arg);
+
+            /* Completar GOTOS con etiqueta de main */
+            arg = crArgEtq(etqMain);
+            completaLans(lansSaltoMain, arg);
+        }
+
+        /* (Opcional) descarga del contexto global:
+         * descargaContexto(niv);   // si lo queréis usar
+         */
     }
     ;
 
@@ -162,8 +225,12 @@ declaVar: tipoSimp TID TPUNTOCOMA  /* tipoSimp: $1, TID: $2, TPUNTOCOMA:$3. Ej -
     }
     | tipoSimp TID TASIG const TPUNTOCOMA  /* tipoSimp: $1, TID: $2, TASIG:$3, const: $4, TPUNTOCOMA:$5 */
     {
-        fprintf(stderr, "DEBUG: insTdS call (init var) name='%s' tipo=%d niv=%d desp=%d\n", $2, $1.t, niv, dvar);
+        /* O lo quitas directamente si ya no necesitas el debug */
+        fprintf(stderr,
+                "DEBUG: insTdS call (init var) name='%s' tipo=%d niv=%d desp=%d\n",
+                $2, $1.t, niv, dvar);
         fflush(stderr);
+
         if (!insTdS(strdup($2), VARIABLE, $1.t, niv, dvar, -1))
             yyerror("Identificador de variable repetido");
         else {

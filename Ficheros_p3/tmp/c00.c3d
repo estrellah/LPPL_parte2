@@ -1,0 +1,8 @@
+  0 INCTOP              ,            ,  i:   0    
+  1 GOTOS               ,            ,  e:   2    
+  2 PUSHFP              ,            ,            
+  3 FPTOP               ,            ,            
+  4 INCTOP              ,            ,  i:   1    
+  5 TOPFP               ,            ,            
+  6 FPPOP               ,            ,            
+  7 FIN                 ,            ,            

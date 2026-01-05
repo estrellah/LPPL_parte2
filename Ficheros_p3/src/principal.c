@@ -41,7 +41,9 @@ int main (int argc, char **argv)
 
       /* === INICIALIZAR GENERACIÓN DE CÓDIGO INTERMEDIO (P3) === */
 
-      yyparse ();
+      fprintf(stderr, "[DEBUG] Antes de yyparse\n");
+      yyparse();
+      fprintf(stderr, "[DEBUG] Después de yyparse\n");
 
       if (numErrores == 0)
         volcarCodigo(nom_fich);
