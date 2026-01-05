@@ -864,7 +864,34 @@ expreSufi:
     }
     | TID TCORCHAB expre TCORCHCERR 
     {
-        /* ... tu código de arrays ... */
+        SIMB sim = obtTdS($1);
+        if (sim.t == T_ERROR) {
+            yyerror("Uso de array no declarado");
+            $$.t = T_ERROR;
+        } else if (sim.t != T_ARRAY) {
+            yyerror("La variable debe ser tipo 'array'");
+            $$.t = T_ERROR;
+        } else {
+            /* Verificar que el índice sea entero (si no fue ya error) */
+            if ($3.t != T_ENTERO && $3.t != T_ERROR)
+                yyerror("El indice del 'array' debe ser entero");
+
+            if ($3.t == T_ENTERO) {
+                /* Obtener info del array y crear temporal para el valor */
+                DIM info_arr = obtTdA(sim.ref);
+                $$.t = info_arr.telem;
+                $$.n = niv;
+                $$.d = creaVarTemp();
+
+                /* Emitir EAV arr, idx, dest_temp */
+                TIPO_ARG aArr = crArgPos(sim.n, sim.d);
+                TIPO_ARG aIdx = crArgPos($3.n, $3.d);
+                TIPO_ARG aRes = crArgPos($$.n, $$.d);
+                emite(EAV, aArr, aIdx, aRes);
+            } else {
+                $$.t = T_ERROR;
+            }
+        }
     }
     /* === ESTRELLA: llamada a función === */
     | TID TPARAB
