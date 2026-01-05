@@ -100,25 +100,37 @@ union YYSTYPE
 
     char *ident;    /* Nombre del identificador*/
     int cent;       /* Valor de la cte numerica entera */
+
     struct {
         int num_params;
         int ref;
         int talla;
     } paramInfo;
+
     struct {
         int t;
     } tipo;
+
     struct{
         int tipo_return;
         char *nombre_func;
         int desp;
         int num_params;
-    }funcion;
+    } funcion;
+
+    /* Expresión con código intermedio asociado */
     struct {
-        int e;
+        int t;   /* tipo de la expresión (T_ENTERO, T_LOGICO, ...) */
+        int d;   /* desplazamiento donde está almacenado el valor */
+        int n;   /* nivel donde está esa posición (0 global, 1 local, ...) */
+    } exp;
+
+    /* Operador que se traduce a un código de operación 3D */
+    struct {
+        int e;   /* código de operación (ESUM, EDIF, EMULT, ...) */
     } emite;
 
-#line 122 "asin.h"
+#line 134 "asin.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
