@@ -5,11 +5,13 @@
 #include <stdio.h>
 #include <string.h>
 #include "header.h"
-#include "libgci.h"
+
+void volcarCodigo(char *nom);
 
 int verTdS=FALSE;                        /* Flag para mostrar la TDS         */
 int verbosidad=FALSE;                    /* Flag si se desea una traza       */
-int numErrores=0;                   /* Contador del numero de errores        */
+int numErrores=0;                        /* Contador del numero de errores   */
+
 /*****************************************************************************/
 void yyerror(const char * msg)
 /*  Tratamiento de errores.                                                  */
@@ -20,7 +22,9 @@ void yyerror(const char * msg)
 /*****************************************************************************/
 int main (int argc, char **argv) 
 /* Gestiona la linea de comandos e invoca al analizador sintactico-semantico.*/
-{ int i, n = 1; char *nom_fich;
+{ 
+  int i, n = 1; 
+  char *nom_fich;
 
   for (i=1; i<argc; ++i) { 
     if (strcmp(argv[i], "-v")==0) { verbosidad = TRUE; n++; }
@@ -34,9 +38,15 @@ int main (int argc, char **argv)
     else {        
       if (verbosidad == TRUE) fprintf(stdout,"%3d.- ", yylineno);
       nom_fich = argv[n];
+
+      /* === INICIALIZAR GENERACIÓN DE CÓDIGO INTERMEDIO (P3) === */
+
       yyparse ();
-      if (numErrores == 0) volcarCodigo(nom_fich);
-      else fprintf(stderr,"\nNumero de errores:      %d\n", numErrores);
+
+      if (numErrores == 0)
+        volcarCodigo(nom_fich);
+      else
+        fprintf(stderr,"\nNumero de errores:      %d\n", numErrores);
     }   
   }
   else fprintf (stderr, "Uso: cmc [-v] [-t] fichero\n");
