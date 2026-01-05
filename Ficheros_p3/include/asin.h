@@ -114,8 +114,11 @@ union YYSTYPE
         int desp;
         int num_params;
     }funcion;
+    struct {
+        int e;
+    } emite;
 
-#line 119 "asin.h"
+#line 122 "asin.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

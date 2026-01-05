@@ -45,6 +45,9 @@
         int desp;
         int num_params;
     }funcion;
+    struct {
+        int e;
+    } emite;
 }
 
 
@@ -84,6 +87,7 @@
 %type <tipo> expreUna
 %type <tipo> expreSufi
 %type <tipo> instExpre
+%type <emite> opUna opMul opAd opRel opIgual opLogic
 
 /* REGLAS - COMO CONSTRUIR CADA SÍMBOLO NO TERMINAL A PARTIR DE SUS PARTES*/
 %%
@@ -578,6 +582,8 @@ expreRel:
         }
     }
     ;
+
+/*SACADO DE LA PAG17*/
 expreAd:
     expreMul 
     {
@@ -594,6 +600,7 @@ expreAd:
         } else {
             $$.t = T_ENTERO;
         }
+        emite($2, crArgPos(niv, $1.d), crArgPos(niv, $3.d), crArgPos(niv, $$.d));
     }
     ;
 expreMul:
@@ -705,18 +712,22 @@ listParamAct:
         $$.talla = TALLA_TIPO_SIMPLE;}
     ;
 
-/*OPERACIONES, NO ALMACENAN NADA*/
+/*TODO LO SIGUIENTE YA ESTÁ HECHO*/
+
+/*OPERACIONES*/
+/*COMO NO HAY ELEMENTOS DE COD INTERMEDIO PARA AND Y OR, UTILIZAREMOS MULT Y SUM*/
 opLogic: 
-    TAND | TOR;
+    TAND {$$.e = EMULT;}| TOR {$$.e = ESUM;};
 opIgual:
-    TIGUALQUE |TDISTINTOQUE;
+    TIGUALQUE {$$.e = EIGUAL;} |TDISTINTOQUE {$$.e = EDIST;};
 opRel:
-    TMAYORQUE | TMENORQUE | TMAYORIGUAL | TMENORIGUAL ;
+    TMAYORQUE {$$.e = EMAY;}| TMENORQUE {$$.e = EMEN;} | TMAYORIGUAL {$$.e = EMAYEQ;}| TMENORIGUAL {$$.e = EMENEQ;};
+/*SACADO DE LA PAG17*/
 opAd:
-    TMAS | TMENOS ;
+    TMAS {$$.e = ESUM;}| TMENOS {$$.e = EDIF;};
 opMul:
-    TMULT | TDIV;
+    TMULT {$$.e = EMULT;}| TDIV {$$.e = EDIVI;};
 opUna: 
-    TMAS | TMENOS | TEXCL;
+    TMAS {$$.e = ESUM;}| TMENOS {$$.e = EDIF;}| TEXCL {$$.e = ESIG;};
 
 %%
