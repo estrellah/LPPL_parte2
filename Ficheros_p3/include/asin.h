@@ -57,36 +57,36 @@ extern int yydebug;
     TASIG = 258,                   /* TASIG  */
     TMAS = 259,                    /* TMAS  */
     TMENOS = 260,                  /* TMENOS  */
-    TDIV = 261,                    /* TDIV  */
-    TMULT = 262,                   /* TMULT  */
-    TEXCL = 263,                   /* TEXCL  */
-    TFALSE = 264,                  /* TFALSE  */
-    TTRUE = 265,                   /* TTRUE  */
-    TAND = 266,                    /* TAND  */
-    TOR = 267,                     /* TOR  */
-    TPARAB = 268,                  /* TPARAB  */
-    TPARCERR = 269,                /* TPARCERR  */
-    TLLAVAB = 270,                 /* TLLAVAB  */
-    TLLAVCERR = 271,               /* TLLAVCERR  */
-    TCORCHAB = 272,                /* TCORCHAB  */
-    TCORCHCERR = 273,              /* TCORCHCERR  */
-    TPUNTOCOMA = 274,              /* TPUNTOCOMA  */
-    TCOMA = 275,                   /* TCOMA  */
-    TREAD = 276,                   /* TREAD  */
-    TPRINT = 277,                  /* TPRINT  */
-    TIF = 278,                     /* TIF  */
-    TELSE = 279,                   /* TELSE  */
-    TFOR = 280,                    /* TFOR  */
-    TRETURN = 281,                 /* TRETURN  */
-    TIGUALQUE = 282,               /* TIGUALQUE  */
-    TDISTINTOQUE = 283,            /* TDISTINTOQUE  */
-    TMAYORQUE = 284,               /* TMAYORQUE  */
-    TMENORQUE = 285,               /* TMENORQUE  */
-    TMAYORIGUAL = 286,             /* TMAYORIGUAL  */
-    TMENORIGUAL = 287,             /* TMENORIGUAL  */
-    TID = 288,                     /* TID  */
-    TINT = 289,                    /* TINT  */
-    TBOOL = 290,                   /* TBOOL  */
+    TMULT = 261,                   /* TMULT  */
+    TDIV = 262,                    /* TDIV  */
+    TPUNTOCOMA = 263,              /* TPUNTOCOMA  */
+    TCOMA = 264,                   /* TCOMA  */
+    TPARAB = 265,                  /* TPARAB  */
+    TPARCERR = 266,                /* TPARCERR  */
+    TLLAVAB = 267,                 /* TLLAVAB  */
+    TLLAVCERR = 268,               /* TLLAVCERR  */
+    TCORCHAB = 269,                /* TCORCHAB  */
+    TCORCHCERR = 270,              /* TCORCHCERR  */
+    TAND = 271,                    /* TAND  */
+    TOR = 272,                     /* TOR  */
+    TEXCL = 273,                   /* TEXCL  */
+    TIGUALQUE = 274,               /* TIGUALQUE  */
+    TDISTINTOQUE = 275,            /* TDISTINTOQUE  */
+    TMAYORQUE = 276,               /* TMAYORQUE  */
+    TMENORQUE = 277,               /* TMENORQUE  */
+    TMAYORIGUAL = 278,             /* TMAYORIGUAL  */
+    TMENORIGUAL = 279,             /* TMENORIGUAL  */
+    TTRUE = 280,                   /* TTRUE  */
+    TFALSE = 281,                  /* TFALSE  */
+    TREAD = 282,                   /* TREAD  */
+    TPRINT = 283,                  /* TPRINT  */
+    TIF = 284,                     /* TIF  */
+    TELSE = 285,                   /* TELSE  */
+    TFOR = 286,                    /* TFOR  */
+    TRETURN = 287,                 /* TRETURN  */
+    TINT = 288,                    /* TINT  */
+    TBOOL = 289,                   /* TBOOL  */
+    TID = 290,                     /* TID  */
     TCTE = 291                     /* TCTE  */
   };
   typedef enum yytokentype yytoken_kind_t;
@@ -96,47 +96,39 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 32 "src/asin.y"
+#line 18 "src/asin.y"
 
-    char *ident;    /* Nombre del identificador*/
-    int cent;       /* Entero genérico (LANS, etiquetas...) */
-
+    char *ident;    /* Nombre del identificador */
+    int cent;       /* Valor entero (usado para constantes, etiquetas, LANS) */
+    
+    /* Estructura para parámetros */
     struct {
         int num_params;
         int ref;
         int talla;
     } paramInfo;
 
+    /* Estructura para tipos simples */
     struct {
         int t;
     } tipo;
 
-    struct{
-        int tipo_return;
-        char *nombre_func;
-        int desp;
-        int num_params;
-    } funcion;
-
-    /* Expresión con código intermedio asociado */
+    /* Estructura para expresiones y constantes (TIPO, DESPLAZAMIENTO, NIVEL, VALOR) */
+    /* Añadimos 'val' porque asinS.y lo usa para constantes numéricas */
     struct {
-        int t;   /* tipo de la expresión (T_ENTERO, T_LOGICO, ...) */
-        int d;   /* desplazamiento donde está almacenado el valor */
-        int n;   /* nivel donde está esa posición (0 global, 1 local, ...) */
+        int t;      /* Tipo (T_ENTERO, T_LOGICO...) */
+        int d;      /* Desplazamiento / Dirección */
+        int n;      /* Nivel */
+        int val;    /* Valor constante (si aplica) */
     } exp;
 
-    /* Operador que se traduce a un código de operación 3D */
+    /* Estructura para listas de parámetros */
     struct {
-        int e;   /* código de operación (ESUM, EDIF, EMULT, ...) */
-    } emite;
+        int ref;
+        int talla;
+    } lista;
 
-    /* Para guardar listas de saltos (verdadero/falso) en una sola acción */
-    struct {
-        int ltrue;
-        int lfalse;
-    } listas;
-
-#line 140 "asin.h"
+#line 132 "asin.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
